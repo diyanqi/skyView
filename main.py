@@ -22,3 +22,126 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
+from db import *
+from process import *
+from storage import *
+
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+app.config['UPLOAD_FOLDER'] = './uploads'
+
+# GET /user/image 获取当前用户的所有图片列表
+@app.route('/user/image', methods=['GET'])
+def getUserImage():
+    token = request.args.get('token')
+    if token == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传token"
+        })
+    userId = getUserIdByToken(token)
+    if userId == None:
+        return jsonify({
+            "code": 401,
+            "message": "token无效"
+        })
+    images = getUserImages(userId)
+    return jsonify({
+        "code": 200,
+        "message": "获取图片列表成功",
+        "data": {
+            "images": images
+        }
+    })
+
+# GET /image/:id 获取图片信息
+
+# POST /user/image 上传图片
+@app.route('/user/image', methods=['POST'])
+def uploadImage():
+    token = request.form['token']
+    if token == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传token"
+        })
+    userId = getUserIdByToken(token)
+    if userId == None:
+        return jsonify({
+            "code": 401,
+            "message": "token无效"
+        })
+    image = request.files['image']
+    if image == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传图片"
+        })
+    # 保存图片
+    filename = secure_filename(image.filename)
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    image.save(path)
+    # 鉴定是否为合法图片
+    if not checkImg(path):
+        return jsonify({
+            "code": 400,
+            "message": "非法图片"
+        })
+    # 上传图片
+    fileId = upload(path)
+    if fileId == None:
+        return jsonify({
+            "code": 500,
+            "message": "上传图片失败"
+        })
+    # 新增图片信息
+    md5 = generateMD5(path)
+    keywords = generateKeywords(path)
+    timestamp = int(time.time())
+    addImage(fileId, userId, md5, keywords, timestamp)
+    # 添加到用户图片列表
+    addUserImage(userId, fileId)
+    # 删除本地图片
+    os.remove(path)
+    # 返回图片信息
+    return jsonify({
+        "code": 200,
+        "message": "上传图片成功",
+        "data": {
+            "url": fileId,
+            "author": userId,
+            "md5": md5,
+            "keywords": keywords,
+            "timestamp": timestamp
+        }
+    })
+
+# GET /user/getToken 获取用户token
+@app.route('/user/getToken', methods=['GET'])
+def getToken():
+    userId = request.args.get('userId')
+    if userId == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传userId"
+        })
+    permission = request.args.get('permission')
+    if permission == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传permission"
+        })
+    token = getUserToken(userId, permission)
+    return jsonify({
+        "code": 200,
+        "message": "获取token成功",
+        "data": {
+            "token": token
+        }
+    })
+
+# DELETE /image/:id 删除图片
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=6666, debug=True)

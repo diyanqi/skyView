@@ -22,7 +22,7 @@ def checkImg(imgPath):
     # print(response.text)
     return True # 合法
 
-def compress(imgPath, maxSize = 1024 * 1024, outputPath):
+def compress(imgPath, outputPath, maxSize = 1024 * 1024):
     img = Image.open(imgPath)
     imgSize = os.path.getsize(imgPath)
     if imgSize <= maxSize:
@@ -41,7 +41,7 @@ def compress(imgPath, maxSize = 1024 * 1024, outputPath):
     with open(outputPath, 'wb') as f:
         f.write(imgByteArr)
 
-def generateThumbnail(imgPath, width = 200, height = 200, outputPath):
+def generateThumbnail(imgPath, outputPath, width = 200, height = 200):
     img = Image.open(imgPath)
     img.thumbnail((width, height))
     img.save(outputPath)
