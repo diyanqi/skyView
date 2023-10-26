@@ -11,7 +11,7 @@ def randomString(length=16):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 def xuehai(file, md5):
-    url = "https://filesoss.yunzuoye.net/XHFileServer/file/upload/CA107011/"
+    url = config.XUEHAI_URL
     payload = {}
     files=[
         ('files',(randomString() + '.jpg', file, 'image/jpeg')),

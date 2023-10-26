@@ -1,0 +1,10 @@
+XUEHAI_URL = "https://filesoss.yunzuoye.net/XHFileServer/file/upload/CA107011/" # 学海OSS上传地址
+DB_PATH = "db.sqlite3" # 数据库路径
+UPLOAD_FOLDER = "./uploads" # 图片上传后的缓存文件夹
+PAGE_SIZE = 10 # 获取图片列表时，默认的每页图片数量
+PAGE_NUM = 1 # 获取图片列表时，默认的页码
+MAX_SIZE = 3 * 1024 * 1024 # 上传图片最大尺寸，否则压缩
+KEYWORDS_GENERATE_ENABLED = True # 是否开启关键词生成
+HF_URL = "https://ty00369-idea-ccnl-taiyi-blip-750m-chinese.hf.space/" # HF模型服务地址
+host = "0.0.0.0" # 服务监听地址
+port = 6666 # 服务监听端口

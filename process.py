@@ -5,6 +5,10 @@ import hashlib
 from PIL import Image
 import os
 from io import BytesIO
+from gradio_client import Client
+import config
+
+client = Client(config.HF_URL)
 
 # 鉴定是否含有不良信息
 def checkImg(imgPath):
@@ -24,6 +28,7 @@ def checkImg(imgPath):
 
 def compress(imgPath, outputPath, maxSize = 1024 * 1024):
     img = Image.open(imgPath)
+    img = img.convert('RGB')
     imgSize = os.path.getsize(imgPath)
     if imgSize <= maxSize:
         img.save(outputPath)
@@ -51,8 +56,12 @@ def generateMD5(imgPath):
         md5 = hashlib.md5(f.read()).hexdigest()
     return md5
 
-def generateKeywords(imgPath):
-    return "keywords"
+def generateKeywords(imgUrl):
+    result = client.predict(
+        imgUrl,	# str representing input in 'Input Image' Image component
+        api_name="/predict"
+    )
+    return (result)
 
 if __name__ == '__main__':
     checkImg("./exampleImg/ikun.jpg")

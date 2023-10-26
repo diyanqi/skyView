@@ -25,10 +25,48 @@ from werkzeug.utils import secure_filename
 from db import *
 from process import *
 from storage import *
+import config
+
+import ssl
+		
+ssl._create_default_https_context = ssl._create_unverified_context()
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-app.config['UPLOAD_FOLDER'] = './uploads'
+app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
+
+# GET /user/:id/image 获取某个用户的所有图片列表
+@app.route('/user/<userId>/image', methods=['GET'])
+def getUserImageById(userId):
+    # 检查用户token的权限是否为 1 - 管理员
+    token = request.args.get('token')
+    if token == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传token"
+        })
+    thisUserId = getUserIdByToken(token)
+    if thisUserId == None:
+        return jsonify({
+            "code": 401,
+            "message": "token无效"
+        })
+    permission = getUserPermission(thisUserId)
+    if permission != 1 and thisUserId != userId:
+        return jsonify({
+            "code": 403,
+            "message": "权限不足"
+        })
+    pageSize = request.args.get('pageSize', default=config.PAGE_SIZE, type=int)
+    pageNum = request.args.get('pageNum', default=config.PAGE_NUM, type=int)
+    images = getUserImages(userId, pageSize, pageNum)
+    return jsonify({
+        "code": 200,
+        "message": "获取图片列表成功",
+        "data": {
+            "images": images
+        }
+    })
 
 # GET /user/image 获取当前用户的所有图片列表
 @app.route('/user/image', methods=['GET'])
@@ -45,7 +83,9 @@ def getUserImage():
             "code": 401,
             "message": "token无效"
         })
-    images = getUserImages(userId)
+    pageSize = request.args.get('pageSize', default=config.PAGE_SIZE, type=int)
+    pageNum = request.args.get('pageNum', default=config.PAGE_NUM, type=int)
+    images = getUserImages(userId, pageSize, pageNum)
     return jsonify({
         "code": 200,
         "message": "获取图片列表成功",
@@ -55,6 +95,35 @@ def getUserImage():
     })
 
 # GET /image/:id 获取图片信息
+@app.route('/image/<imageId>', methods=['GET'])
+def getImageById(imageId):
+    token = request.args.get('token')
+    if token == None:
+        return jsonify({
+            "code": 400,
+            "message": "未上传token"
+        })
+    userId = getUserIdByToken(token)
+    if userId == None:
+        return jsonify({
+            "code": 401,
+            "message": "token无效"
+        })
+    # 获取图片信息
+    image = getImageInfo(imageId)
+    print(imageId)
+    if image == None:
+        return jsonify({
+            "code": 404,
+            "message": "图片不存在"
+        })
+    return jsonify({
+        "code": 200,
+        "message": "获取图片信息成功",
+        "data": {
+            "image": image
+        }
+    })
 
 # POST /user/image 上传图片
 @app.route('/user/image', methods=['POST'])
@@ -87,6 +156,9 @@ def uploadImage():
             "code": 400,
             "message": "非法图片"
         })
+    # 压缩图片
+    compress(path, path, config.MAX_SIZE)
+    # print("Started uploading.")
     # 上传图片
     fileId = upload(path)
     if fileId == None:
@@ -94,9 +166,11 @@ def uploadImage():
             "code": 500,
             "message": "上传图片失败"
         })
+    # print("Uploaded.")
     # 新增图片信息
     md5 = generateMD5(path)
-    keywords = generateKeywords(path)
+    if request.form['keywords'] != None and config.KEYWORDS_GENERATE_ENABLED:
+        keywords = generateKeywords(fileId)
     timestamp = int(time.time())
     addImage(fileId, userId, md5, keywords, timestamp)
     # 添加到用户图片列表
@@ -141,7 +215,13 @@ def getToken():
     })
 
 # DELETE /image/:id 删除图片
+# since XH has plenty of storage, we don't need to delete images
 
+# if __name__ == '__main__':
+#     app.run(host='0.0.0.0', port=6666, debug=True)
+
+from gevent import pywsgi
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=6666, debug=True)
+    server = pywsgi.WSGIServer((config.host, config.port), app)
+    server.serve_forever()

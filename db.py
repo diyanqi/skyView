@@ -4,8 +4,10 @@ import sqlite3
 import os
 import sys
 import json
+import config
+import re
 
-conn = sqlite3.connect('db.sqlite3', check_same_thread=False)
+conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
 c = conn.cursor()
 
 # 随机生成token
@@ -99,11 +101,46 @@ def addUserImage(userId, url):
         conn.commit()
         return True 
 
+def url2id(url):
+    # https://xhfs0.ztytech.com/CA107011/f637d39729cd40648ce9e5a05a66f7ff.jpg
+    # -> xhfs0_f637d39729cd40648ce9e5a05a66f7ff
+    # 规律：xhfs<数字>_文件名无后缀
+    return re.sub(r'https://xhfs(\d).ztytech.com/CA107011/', r'xhfs\1_', url).replace('.jpg', '')
+
+def id2url(pid):
+    # xhfs0_f637d39729cd40648ce9e5a05a66f7ff
+    # -> https://xhfs0.ztytech.com/CA107011/f637d39729cd40648ce9e5a05a66f7ff.jpg
+    # 规律：xhfs<数字>_文件名无后缀
+    return re.sub(r'xhfs(\d)_', r'https://xhfs\1.ztytech.com/CA107011/', pid) + '.jpg'
+
 # 获取用户所有图片列表
-def getUserImages(userId):
+def getUserImages(userId, pageSize, pageNum):
     c.execute("SELECT * FROM users WHERE id=?", (userId,))
     user = c.fetchone()
     if user == None:
         return None
     else:
-        return json.loads(user[3])
+        images = json.loads(user[3])
+        images = images[(pageNum - 1) * pageSize:pageNum * pageSize]
+        l = []
+        for image in images:
+            l.append({"id": url2id(image), "url": image})
+        return l
+
+# 获取图片信息
+def getImageInfo(pid):
+    url = id2url(pid)
+    c.execute("SELECT * FROM images WHERE url=?", (url,))
+    image = c.fetchone()
+    if image == None:
+        return None
+    else:
+        return {
+            "id": pid,
+            "index": image[0],
+            "url": image[1],
+            "author": image[2],
+            "md5": image[3],
+            "keywords": image[4],
+            "timestamp": image[5]
+        }
