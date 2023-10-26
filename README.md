@@ -20,3 +20,7 @@ python3 main.py
 ## configures
 
 see `config.py`
+
+## document
+
+see https://www.amzcd.top/posts/zvmsapi/#zvms_skyview_api

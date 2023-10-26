@@ -147,7 +147,7 @@ def uploadImage():
             "message": "未上传图片"
         })
     # 保存图片
-    filename = secure_filename(image.filename)
+    filename = randomString() + '.jpg'
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     image.save(path)
     # 鉴定是否为合法图片
@@ -169,7 +169,8 @@ def uploadImage():
     # print("Uploaded.")
     # 新增图片信息
     md5 = generateMD5(path)
-    if request.form['keywords'] != None and config.KEYWORDS_GENERATE_ENABLED:
+    keywords = ""
+    if request.form.get('keywords') != None and config.KEYWORDS_GENERATE_ENABLED:
         keywords = generateKeywords(fileId)
     timestamp = int(time.time())
     addImage(fileId, userId, md5, keywords, timestamp)
@@ -213,6 +214,11 @@ def getToken():
             "token": token
         }
     })
+
+# root: redirect to https://www.amzcd.top/posts/zvmsapi/#zvms_skyview_api
+@app.route('/', methods=['GET'])
+def root():
+    return redirect("https://www.amzcd.top/posts/zvmsapi/#zvms_skyview_api", code=302)
 
 # DELETE /image/:id 删除图片
 # since XH has plenty of storage, we don't need to delete images
